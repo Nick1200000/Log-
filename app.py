@@ -76,11 +76,12 @@ def process_logs(log_data: Dict) -> pd.DataFrame:
         "eventName": "EventName",
         "sourceIPAddress": "SourceIP",
         "userIdentity.arn": "User",
-        "errorCode": "Error",
+        "errorCode": "ErrorCode",  # Renamed to match log structure
         "eventSource": "EventSource",
         "userAgent": "UserAgent"
     }
     available_columns = {col: name for col, name in desired_columns.items() if col in df.columns}
+    logger.info(f"Available columns in DataFrame: {list(available_columns.keys())}")
     df = df[list(available_columns.keys())].rename(columns=available_columns)
 
     if "EventTime" in df.columns:
@@ -114,21 +115,27 @@ def analyze_data(df: pd.DataFrame) -> Tuple[Optional[Dict], Optional[pd.DataFram
                 "remedy": "Review S3 bucket policies to ensure private access. Restrict 'GetBucketAcl' to authorized IPs and roles."
             }
 
-    # Detect unauthorized API calls
-    unauthorized_events = df[df["errorCode"].str.contains("Unauthorized", na=False, case=False)]
-    if not unauthorized_events.empty:
-        security_issues["UnauthorizedAccess"] = {
-            "cause": "Unauthorized API calls detected, possibly due to misconfigured IAM roles or expired credentials.",
-            "remedy": "Check IAM policies and rotate credentials. Ensure least privilege principle is applied."
-        }
+    # Detect unauthorized API calls (check if column exists)
+    if "ErrorCode" in df.columns:
+        unauthorized_events = df[df["ErrorCode"].str.contains("Unauthorized", na=False, case=False)]
+        if not unauthorized_events.empty:
+            security_issues["UnauthorizedAccess"] = {
+                "cause": "Unauthorized API calls detected, possibly due to misconfigured IAM roles or expired credentials.",
+                "remedy": "Check IAM policies and rotate credentials. Ensure least privilege principle is applied."
+            }
+    else:
+        logger.warning("Column 'ErrorCode' not found in DataFrame, skipping unauthorized access check.")
 
     # Detect unusual user agents
-    unusual_agents = df[df["UserAgent"].str.contains("bot|crawler", case=False, na=False)]
-    if not unusual_agents.empty:
-        security_issues["UnusualActivity"] = {
-            "cause": "Unusual user agents (e.g., bots or crawlers) detected, suggesting potential scraping or attack.",
-            "remedy": "Implement bot protection (e.g., AWS WAF) and monitor logs for patterns."
-        }
+    if "UserAgent" in df.columns:
+        unusual_agents = df[df["UserAgent"].str.contains("bot|crawler", case=False, na=False)]
+        if not unusual_agents.empty:
+            security_issues["UnusualActivity"] = {
+                "cause": "Unusual user agents (e.g., bots or crawlers) detected, suggesting potential scraping or attack.",
+                "remedy": "Implement bot protection (e.g., AWS WAF) and monitor logs for patterns."
+            }
+    else:
+        logger.warning("Column 'UserAgent' not found in DataFrame, skipping unusual activity check.")
 
     if "EventName" in df.columns and not df["EventName"].empty:
         plot_data = df["EventName"].value_counts().reset_index()
