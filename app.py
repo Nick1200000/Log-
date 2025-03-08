@@ -119,24 +119,24 @@ def analyze_data(df: pd.DataFrame) -> tuple:
 # Streamlit App
 st.set_page_config(page_title="ThreatLens: AWS CloudTrail Log Analyzer", layout="wide")
 
-# Custom Styling with 3D Effects
+# Custom Styling with Updated Background Color
 st.markdown(
     """
     <style>
     /* Import Google Fonts */
     @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
 
-    /* Main App Styling with 3D Effect */
+    /* Main App Styling with 3D Effect and New Background */
     .main {
-        background: linear-gradient(135deg, #e0e7ff, #f0f2f6);
+        background: #2f3640;  /* New background color: Soft Dark Gray */
         font-family: 'Roboto', sans-serif;
         perspective: 1000px;
     }
     .stApp {
-        background: linear-gradient(145deg, #ffffff, #f5f7fa);
+        background: #3b414a;  /* Slightly lighter gray for content area */
         padding: 30px 50px;
         border-radius: 15px;
-        box-shadow: 0 20px 30px rgba(0, 0, 0, 0.1), 0 10px 10px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 20px 30px rgba(0, 0, 0, 0.3), 0 10px 10px rgba(0, 0, 0, 0.1);
         transform: rotateX(5deg) rotateY(5deg);
         transition: transform 0.3s ease;
     }
@@ -146,17 +146,17 @@ st.markdown(
     h1 {
         color: #1f77b4;
         font-size: 2.8em;
-        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
         margin-bottom: 5px;
     }
     .stMarkdown h2 {
-        color: #2c3e50;
+        color: #e0e0e0;  /* Lighter text color for contrast */
         font-size: 1.6em;
-        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.05);
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
         margin-top: 25px;
     }
     .stMarkdown p {
-        color: #7f8c8d;
+        color: #b0b8c4;  /* Lighter gray for text */
         font-size: 1.1em;
         line-height: 1.7;
     }
@@ -164,9 +164,9 @@ st.markdown(
     /* Sidebar Styling with 3D Effect */
     .sidebar .sidebar-content {
         padding: 25px;
-        background: linear-gradient(145deg, #ffffff, #f0f3f5);
+        background: linear-gradient(145deg, #3b414a, #4a515d);  /* Adjusted gradient for sidebar */
         border-radius: 15px;
-        box-shadow: 0 15px 25px rgba(0, 0, 0, 0.1), inset 0 0 10px rgba(255, 255, 255, 0.5);
+        box-shadow: 0 15px 25px rgba(0, 0, 0, 0.3), inset 0 0 10px rgba(255, 255, 255, 0.2);
         transform: translateZ(5px);
     }
     .sidebar .stSlider, .sidebar .stButton, .sidebar .stSelectbox {
@@ -175,18 +175,19 @@ st.markdown(
     .sidebar h3 {
         color: #1f77b4;
         font-size: 1.3em;
-        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
         margin-bottom: 15px;
     }
     .sidebar .stSelectbox div {
-        background: linear-gradient(145deg, #ecf0f1, #ffffff);
+        background: linear-gradient(145deg, #4a515d, #5a626f);  /* Adjusted selectbox background */
         padding: 8px 12px;
         border-radius: 10px;
-        box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1), inset 0 0 5px rgba(255, 255, 255, 0.5);
+        box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3), inset 0 0 5px rgba(255, 255, 255, 0.2);
         transition: all 0.3s ease;
+        color: #e0e0e0;
     }
     .sidebar .stSelectbox div:hover {
-        background: linear-gradient(145deg, #d5dbdb, #e8ecef);
+        background: linear-gradient(145deg, #5a626f, #6a727f);
         transform: translateZ(5px);
     }
     .stButton>button {
@@ -195,18 +196,18 @@ st.markdown(
         border: none;
         padding: 12px 25px;
         border-radius: 10px;
-        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2), inset 0 0 5px rgba(255, 255, 255, 0.3);
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.4), inset 0 0 5px rgba(255, 255, 255, 0.3);
         transition: all 0.3s ease;
         font-weight: bold;
     }
     .stButton>button:hover {
         background: linear-gradient(145deg, #155a8a, #1f77b4);
         transform: translateY(-5px) translateZ(10px);
-        box-shadow: 0 12px 20px rgba(0, 0, 0, 0.3), inset 0 0 5px rgba(255, 255, 255, 0.5);
+        box-shadow: 0 12px 20px rgba(0, 0, 0, 0.5), inset 0 0 5px rgba(255, 255, 255, 0.5);
     }
     .stButton>button:active {
         transform: translateY(0) translateZ(0);
-        box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2), inset 0 0 5px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3), inset 0 0 5px rgba(0, 0, 0, 0.1);
     }
 
     /* Loading Spinner */
@@ -216,21 +217,21 @@ st.markdown(
         left: 50%;
         transform: translate(-50%, -50%);
         z-index: 1000;
-        background: rgba(255, 255, 255, 0.9);
+        background: rgba(59, 65, 74, 0.9);  /* Match content area background */
         padding: 20px;
         border-radius: 10px;
-        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
     }
 
     /* Footer with 3D Effect */
     .stMarkdown footer {
         text-align: center;
         padding: 25px 0;
-        color: #7f8c8d;
+        color: #b0b8c4;  /* Lighter text for contrast */
         font-size: 1em;
-        background: linear-gradient(145deg, #ffffff, #f0f3f5);
+        background: linear-gradient(145deg, #3b414a, #4a515d);  /* Adjusted footer background */
         border-radius: 10px;
-        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1), inset 0 0 10px rgba(255, 255, 255, 0.5);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3), inset 0 0 10px rgba(255, 255, 255, 0.2);
         transform: translateZ(5px);
     }
     .stMarkdown footer a {
@@ -239,7 +240,7 @@ st.markdown(
         transition: all 0.3s ease;
     }
     .stMarkdown footer a:hover {
-        color: #155a8a;
+        color: #66b0ff;  /* Lighter blue for contrast */
         text-shadow: 0 0 5px rgba(31, 119, 180, 0.5);
     }
 
@@ -249,14 +250,14 @@ st.markdown(
         color: white;
         padding: 12px;
         border-radius: 10px;
-        box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2), inset 0 0 5px rgba(255, 255, 255, 0.5);
+        box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3), inset 0 0 5px rgba(255, 255, 255, 0.5);
     }
     .stWarning {
         background: linear-gradient(145deg, #e74c3c, #c0392b);
         color: white;
         padding: 12px;
         border-radius: 10px;
-        box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2), inset 0 0 5px rgba(255, 255, 255, 0.5);
+        box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3), inset 0 0 5px rgba(255, 255, 255, 0.5);
     }
     </style>
     """,
@@ -387,7 +388,7 @@ if time.time() - st.session_state.last_update >= interval:
 # Footer
 st.markdown(
     """
-    <div style="text-align: center; padding: 25px 0; color: #7f8c8d; font-size: 1em; background: linear-gradient(145deg, #ffffff, #f0f3f5); border-radius: 10px; box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1), inset 0 0 10px rgba(255, 255, 255, 0.5); transform: translateZ(5px);">
+    <div style="text-align: center; padding: 25px 0; color: #b0b8c4; font-size: 1em; background: linear-gradient(145deg, #3b414a, #4a515d); border-radius: 10px; box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3), inset 0 0 10px rgba(255, 255, 255, 0.2); transform: translateZ(5px);">
         **ThreatLens** | © 2025 | 
         <a href="mailto:your-email@example.com" style="color: #1f77b4; text-decoration: none; transition: all 0.3s ease;">Contact Us</a>  
         <br>This app processes your logs in real-time and does not store data unless explicitly saved.
