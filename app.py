@@ -11,7 +11,7 @@ import time
 import smtplib
 from email.mime.text import MIMEText
 from datetime import datetime
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 from concurrent.futures import ThreadPoolExecutor
 import retrying
 import os
@@ -76,7 +76,9 @@ def process_logs(log_data: Dict) -> pd.DataFrame:
         "eventName": "EventName",
         "sourceIPAddress": "SourceIP",
         "userIdentity.arn": "User",
-        "errorCode": "Error"
+        "errorCode": "Error",
+        "eventSource": "EventSource",
+        "userAgent": "UserAgent"
     }
     available_columns = {col: name for col, name in desired_columns.items() if col in df.columns}
     df = df[list(available_columns.keys())].rename(columns=available_columns)
@@ -92,17 +94,41 @@ def process_multiple_logs(bucket: str, log_keys: List[str]) -> pd.DataFrame:
     dfs = [process_logs(log_data) for log_data in log_data_list if log_data]
     return pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
 
-def analyze_data(df: pd.DataFrame) -> tuple:
+def analyze_data(df: pd.DataFrame) -> Tuple[Optional[Dict], Optional[pd.DataFrame], Optional[Dict]]:
     if df.empty:
-        return None, None
+        return None, None, None
 
     total_events = len(df)
     unique_events = df.get("EventName", pd.Series()).nunique()
     unique_users = df.get("User", pd.Series()).nunique()
 
     suspicious_ips = None
+    security_issues = {}
+
     if "SourceIP" in df.columns and "EventName" in df.columns:
+        # Detect suspicious IPs (e.g., frequent 'GetBucketAcl' calls)
         suspicious_ips = df[df["EventName"] == "GetBucketAcl"]["SourceIP"].value_counts().head()
+        if suspicious_ips is not None and len(suspicious_ips) > 5:
+            security_issues["ExcessiveBucketAccess"] = {
+                "cause": "Multiple IPs are accessing 'GetBucketAcl', indicating potential unauthorized access or bucket misconfiguration.",
+                "remedy": "Review S3 bucket policies to ensure private access. Restrict 'GetBucketAcl' to authorized IPs and roles."
+            }
+
+    # Detect unauthorized API calls
+    unauthorized_events = df[df["errorCode"].str.contains("Unauthorized", na=False, case=False)]
+    if not unauthorized_events.empty:
+        security_issues["UnauthorizedAccess"] = {
+            "cause": "Unauthorized API calls detected, possibly due to misconfigured IAM roles or expired credentials.",
+            "remedy": "Check IAM policies and rotate credentials. Ensure least privilege principle is applied."
+        }
+
+    # Detect unusual user agents
+    unusual_agents = df[df["UserAgent"].str.contains("bot|crawler", case=False, na=False)]
+    if not unusual_agents.empty:
+        security_issues["UnusualActivity"] = {
+            "cause": "Unusual user agents (e.g., bots or crawlers) detected, suggesting potential scraping or attack.",
+            "remedy": "Implement bot protection (e.g., AWS WAF) and monitor logs for patterns."
+        }
 
     if "EventName" in df.columns and not df["EventName"].empty:
         plot_data = df["EventName"].value_counts().reset_index()
@@ -113,8 +139,8 @@ def analyze_data(df: pd.DataFrame) -> tuple:
             "unique_events": unique_events,
             "unique_users": unique_users,
             "suspicious_ips": suspicious_ips
-        }, plot_data
-    return None, None
+        }, plot_data, security_issues if security_issues else None
+    return None, None, None
 
 # Streamlit App
 st.set_page_config(page_title="ThreatLens: AWS CloudTrail Log Analyzer", layout="wide")
@@ -128,7 +154,7 @@ st.markdown(
 
     /* Main App Styling with 3D Effect and New Background */
     .main {
-        background: #2f3640;  /* New background color: Soft Dark Gray */
+        background: #2f3640;  /* Soft Dark Gray */
         font-family: 'Roboto', sans-serif;
         perspective: 1000px;
     }
@@ -164,7 +190,7 @@ st.markdown(
     /* Sidebar Styling with 3D Effect */
     .sidebar .sidebar-content {
         padding: 25px;
-        background: linear-gradient(145deg, #3b414a, #4a515d);  /* Adjusted gradient for sidebar */
+        background: linear-gradient(145deg, #3b414a, #4a515d);
         border-radius: 15px;
         box-shadow: 0 15px 25px rgba(0, 0, 0, 0.3), inset 0 0 10px rgba(255, 255, 255, 0.2);
         transform: translateZ(5px);
@@ -179,7 +205,7 @@ st.markdown(
         margin-bottom: 15px;
     }
     .sidebar .stSelectbox div {
-        background: linear-gradient(145deg, #4a515d, #5a626f);  /* Adjusted selectbox background */
+        background: linear-gradient(145deg, #4a515d, #5a626f);
         padding: 8px 12px;
         border-radius: 10px;
         box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3), inset 0 0 5px rgba(255, 255, 255, 0.2);
@@ -217,7 +243,7 @@ st.markdown(
         left: 50%;
         transform: translate(-50%, -50%);
         z-index: 1000;
-        background: rgba(59, 65, 74, 0.9);  /* Match content area background */
+        background: rgba(59, 65, 74, 0.9);
         padding: 20px;
         border-radius: 10px;
         box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
@@ -227,9 +253,9 @@ st.markdown(
     .stMarkdown footer {
         text-align: center;
         padding: 25px 0;
-        color: #b0b8c4;  /* Lighter text for contrast */
+        color: #b0b8c4;
         font-size: 1em;
-        background: linear-gradient(145deg, #3b414a, #4a515d);  /* Adjusted footer background */
+        background: linear-gradient(145deg, #3b414a, #4a515d);
         border-radius: 10px;
         box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3), inset 0 0 10px rgba(255, 255, 255, 0.2);
         transform: translateZ(5px);
@@ -240,7 +266,7 @@ st.markdown(
         transition: all 0.3s ease;
     }
     .stMarkdown footer a:hover {
-        color: #66b0ff;  /* Lighter blue for contrast */
+        color: #66b0ff;
         text-shadow: 0 0 5px rgba(31, 119, 180, 0.5);
     }
 
@@ -279,7 +305,7 @@ with st.sidebar:
     user_tier = st.selectbox("Select your tier", ["Free", "Premium"], key="user_tier_select")
     st.header("Pricing")
     st.write("**Free Tier**: Basic analysis and CSV downloads.")
-    st.write("**Premium Tier ($10/month)**: Email alerts, PDF reports, and priority support.")
+    st.write("**Premium Tier ($10/month)**: Email alerts, PDF reports, and advanced security insights.")
     st.markdown("[Learn More & Sign Up](https://nick1200000.github.io/log-)")
     st.header("Help")
     st.write("Upload CloudTrail logs to your S3 bucket and configure AWS credentials in Streamlit secrets to start analyzing.")
@@ -311,7 +337,7 @@ if st.session_state.last_update == 0 or (time.time() - st.session_state.last_upd
         st.session_state.last_update = time.time()
 
 # Analyze Data
-summary, plot_data = analyze_data(st.session_state.df)
+summary, plot_data, security_issues = analyze_data(st.session_state.df)
 if summary:
     st.subheader("📊 Analysis Summary")
     st.write(f"**Total Events Processed:** {summary['total_events']}")
@@ -348,6 +374,15 @@ if summary:
     fig.update_layout(showlegend=False, xaxis_title="Count", yaxis_title="Event Name")
     st.plotly_chart(fig)
 
+    # Display Security Issues and Remedies (Premium Feature)
+    if user_tier == "Premium" and security_issues:
+        st.subheader("🔍 Security Issues & Remedies")
+        for issue_type, details in security_issues.items():
+            st.markdown(f"**{issue_type.replace('_', ' ').title()}**")
+            st.write(f"**Cause:** {details['cause']}")
+            st.write(f"**Remedy:** {details['remedy']}")
+            st.markdown("---")
+
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     st.session_state.df.to_csv(f"processed_cloudtrail_logs_{timestamp}.csv", index=False)
     st.write(f"Data saved as 'processed_cloudtrail_logs_{timestamp}.csv'.")
@@ -368,6 +403,12 @@ if summary:
             Paragraph(f"Unique Users: {summary['unique_users']}", styles['Normal']),
             Paragraph("Suspicious IPs: " + (summary["suspicious_ips"].to_string() if summary["suspicious_ips"] is not None else "None"), styles['Normal'])
         ]
+        if security_issues:
+            for issue_type, details in security_issues.items():
+                content.append(Paragraph(f"{issue_type.replace('_', ' ').title()}", styles['Heading2']))
+                content.append(Paragraph(f"Cause: {details['cause']}", styles['Normal']))
+                content.append(Paragraph(f"Remedy: {details['remedy']}", styles['Normal']))
+                content.append(Spacer(1, 12))
         doc.build(content)
         st.download_button(
             label="Download PDF Report",
@@ -376,7 +417,7 @@ if summary:
             mime="application/pdf"
         )
     else:
-        st.info("Upgrade to Premium to download PDF reports!")
+        st.info("Upgrade to Premium to download PDF reports and access advanced security insights!")
 else:
     st.write("No data to analyze yet. Waiting for logs...")
 
