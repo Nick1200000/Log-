@@ -119,43 +119,142 @@ def analyze_data(df: pd.DataFrame) -> tuple:
 # Streamlit App
 st.set_page_config(page_title="ThreatLens: AWS CloudTrail Log Analyzer", layout="wide")
 
-# Custom Styling
+# Custom Styling with Improved Design
 st.markdown(
     """
     <style>
+    /* Import Google Fonts */
+    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
+    /* Main App Styling */
     .main {
         background-color: #f0f2f6;
+        font-family: 'Roboto', sans-serif;
     }
     .stApp {
         background-color: #ffffff;
-        padding: 20px;
-        border-radius: 10px;
+        padding: 20px 40px;
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
     h1 {
         color: #1f77b4;
+        font-size: 2.5em;
+        margin-bottom: 0;
+    }
+    .stMarkdown h2 {
+        color: #2c3e50;
+        font-size: 1.5em;
+        margin-top: 20px;
+    }
+    .stMarkdown p {
+        color: #7f8c8d;
+        font-size: 1em;
+        line-height: 1.6;
+    }
+
+    /* Sidebar Styling */
+    .sidebar .sidebar-content {
+        padding: 20px;
+        background-color: #ffffff;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .sidebar .stSlider, .sidebar .stButton, .sidebar .stSelectbox {
+        margin-bottom: 15px;
+    }
+    .sidebar h3 {
+        color: #1f77b4;
+        font-size: 1.2em;
+        margin-bottom: 10px;
+    }
+    .sidebar .stSelectbox div {
+        background-color: #ecf0f1;
+        padding: 5px 10px;
+        border-radius: 5px;
+    }
+    .sidebar .stSelectbox div:hover {
+        background-color: #d5dbdb;
+    }
+    .stButton>button {
+        background-color: #1f77b4;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        transition: all 0.3s ease;
+    }
+    .stButton>button:hover {
+        background-color: #155a8a;
+        transform: translateY(-2px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    .stButton>button:active {
+        transform: translateY(0);
+    }
+
+    /* Loading Spinner */
+    .stSpinner {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 1000;
+    }
+
+    /* Footer */
+    .stMarkdown footer {
+        text-align: center;
+        padding: 20px 0;
+        color: #7f8c8d;
+        font-size: 0.9em;
+    }
+    .stMarkdown footer a {
+        color: #1f77b4;
+        text-decoration: none;
+    }
+    .stMarkdown footer a:hover {
+        text-decoration: underline;
+    }
+
+    /* Success and Warning Messages */
+    .stSuccess {
+        background-color: #2ecc71;
+        color: white;
+        padding: 10px;
+        border-radius: 5px;
+    }
+    .stWarning {
+        background-color: #e74c3c;
+        color: white;
+        padding: 10px;
+        border-radius: 5px;
     }
     </style>
     """,
     unsafe_allow_html=True
 )
 
-st.image("logo.jpeg", width=200)
+# Logo and Title
+st.image("logo.jpeg", width=250, output_format="auto")
 st.title("ThreatLens: AWS CloudTrail Log Analyzer")
-st.write("Secure your AWS environment with real-time CloudTrail insights!")
+st.markdown("**Real-Time Security Insights for Your AWS Environment**")
 
 # Sidebar
-st.sidebar.header("Controls")
-interval = st.sidebar.slider("Update Interval (seconds)", min_value=10, max_value=60, value=30)
-refresh_button = st.sidebar.button("Refresh Data Now")
-st.sidebar.header("User Tier")
-user_tier = st.sidebar.selectbox("Select your tier", ["Free", "Premium"])
-st.sidebar.header("Pricing")
-st.sidebar.write("**Free Tier**: Basic analysis and CSV downloads.")
-st.sidebar.write("**Premium Tier ($10/month)**: Email alerts, PDF reports, and priority support.")
-st.sidebar.markdown("[Learn More & Sign Up](https://nick1200000.github.io/log-)")
-st.sidebar.header("Help")
-st.sidebar.write("Upload CloudTrail logs to your S3 bucket and configure AWS credentials in Streamlit secrets to start analyzing.")
-st.sidebar.markdown("[Share ThreatLens](https://nick1200000-log-.streamlit.app)")
+with st.sidebar:
+    st.header("Controls")
+    interval = st.slider("Update Interval (seconds)", min_value=10, max_value=60, value=30)
+    if st.button("Refresh Data Now"):
+        st.session_state.last_update = 0  # Force refresh
+    st.header("User Tier")
+    user_tier = st.selectbox("Select your tier", ["Free", "Premium"], key="user_tier_select")
+    st.header("Pricing")
+    st.write("**Free Tier**: Basic analysis and CSV downloads.")
+    st.write("**Premium Tier ($10/month)**: Email alerts, PDF reports, and priority support.")
+    st.markdown("[Learn More & Sign Up](https://nick1200000.github.io/log-)")
+    st.header("Help")
+    st.write("Upload CloudTrail logs to your S3 bucket and configure AWS credentials in Streamlit secrets to start analyzing.")
+    st.markdown("[Share ThreatLens](https://nick1200000-log-.streamlit.app)")
 
 # Initialize Session State
 if "processed_keys" not in st.session_state:
@@ -165,21 +264,22 @@ if "df" not in st.session_state:
 if "last_update" not in st.session_state:
     st.session_state.last_update = time.time()
 
-# Update Data
-if refresh_button or (time.time() - st.session_state.last_update >= interval):
-    log_files = list_log_files(S3_BUCKET, LOG_PREFIX)
-    if log_files:
-        new_log_files = [key for key in log_files if key not in st.session_state.processed_keys]
-        if new_log_files:
-            st.write(f"Found {len(new_log_files)} new log files. Processing...")
-            new_df = process_multiple_logs(S3_BUCKET, new_log_files)
-            st.session_state.df = pd.concat([st.session_state.df, new_df], ignore_index=True)
-            st.session_state.processed_keys.update(new_log_files)
-            st.session_state.last_update = time.time()
+# Update Data with Loading Spinner
+if st.session_state.last_update == 0 or (time.time() - st.session_state.last_update >= interval):
+    with st.spinner("Processing new log files..."):
+        log_files = list_log_files(S3_BUCKET, LOG_PREFIX)
+        if log_files:
+            new_log_files = [key for key in log_files if key not in st.session_state.processed_keys]
+            if new_log_files:
+                st.write(f"Found {len(new_log_files)} new log files. Processing...")
+                new_df = process_multiple_logs(S3_BUCKET, new_log_files)
+                st.session_state.df = pd.concat([st.session_state.df, new_df], ignore_index=True)
+                st.session_state.processed_keys.update(new_log_files)
+            else:
+                st.write("No new log files to process. Waiting for new logs...")
         else:
-            st.write("No new log files to process. Waiting for new logs...")
-    else:
-        st.write("No log files found in the specified S3 bucket.")
+            st.write("No log files found in the specified S3 bucket.")
+        st.session_state.last_update = time.time()
 
 # Analyze Data
 summary, plot_data = analyze_data(st.session_state.df)
@@ -259,8 +359,11 @@ if time.time() - st.session_state.last_update >= interval:
 # Footer
 st.markdown(
     """
-    ---
-    **ThreatLens** | © 2025 | [Contact Us](mailto:your-email@example.com)  
-    This app processes your logs in real-time and does not store data unless explicitly saved.
-    """
+    <div style="text-align: center; padding: 20px 0; color: #7f8c8d; font-size: 0.9em;">
+        **ThreatLens** | © 2025 | 
+        <a href="mailto:your-email@example.com" style="color: #1f77b4; text-decoration: none;">Contact Us</a>  
+        <br>This app processes your logs in real-time and does not store data unless explicitly saved.
+    </div>
+    """,
+    unsafe_allow_html=True
 )
