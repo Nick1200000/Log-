@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 # AWS S3 Configuration (will use secrets for credentials)
 S3_BUCKET = "aws-cloudtrail-logs-390844762464-736889dc"
-LOG_PREFIX = "AWSLogs/390844762464/CloudTrail/ap-south-1/2025/02"
+LOG_PREFIX = "AWSLogs/390844762464/CloudTrail/ap-south-1/2025/"
 
 # Initialize Boto3 S3 Client with credentials from secrets
 s3 = boto3.client(
