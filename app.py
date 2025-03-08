@@ -119,78 +119,94 @@ def analyze_data(df: pd.DataFrame) -> tuple:
 # Streamlit App
 st.set_page_config(page_title="ThreatLens: AWS CloudTrail Log Analyzer", layout="wide")
 
-# Custom Styling with Improved Design
+# Custom Styling with 3D Effects
 st.markdown(
     """
     <style>
     /* Import Google Fonts */
     @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
 
-    /* Main App Styling */
+    /* Main App Styling with 3D Effect */
     .main {
-        background-color: #f0f2f6;
+        background: linear-gradient(135deg, #e0e7ff, #f0f2f6);
         font-family: 'Roboto', sans-serif;
+        perspective: 1000px;
     }
     .stApp {
-        background-color: #ffffff;
-        padding: 20px 40px;
+        background: linear-gradient(145deg, #ffffff, #f5f7fa);
+        padding: 30px 50px;
         border-radius: 15px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 20px 30px rgba(0, 0, 0, 0.1), 0 10px 10px rgba(0, 0, 0, 0.05);
+        transform: rotateX(5deg) rotateY(5deg);
+        transition: transform 0.3s ease;
+    }
+    .stApp:hover {
+        transform: rotateX(0deg) rotateY(0deg) translateZ(10px);
     }
     h1 {
         color: #1f77b4;
-        font-size: 2.5em;
-        margin-bottom: 0;
+        font-size: 2.8em;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        margin-bottom: 5px;
     }
     .stMarkdown h2 {
         color: #2c3e50;
-        font-size: 1.5em;
-        margin-top: 20px;
+        font-size: 1.6em;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.05);
+        margin-top: 25px;
     }
     .stMarkdown p {
         color: #7f8c8d;
-        font-size: 1em;
-        line-height: 1.6;
+        font-size: 1.1em;
+        line-height: 1.7;
     }
 
-    /* Sidebar Styling */
+    /* Sidebar Styling with 3D Effect */
     .sidebar .sidebar-content {
-        padding: 20px;
-        background-color: #ffffff;
-        border-radius: 10px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        padding: 25px;
+        background: linear-gradient(145deg, #ffffff, #f0f3f5);
+        border-radius: 15px;
+        box-shadow: 0 15px 25px rgba(0, 0, 0, 0.1), inset 0 0 10px rgba(255, 255, 255, 0.5);
+        transform: translateZ(5px);
     }
     .sidebar .stSlider, .sidebar .stButton, .sidebar .stSelectbox {
-        margin-bottom: 15px;
+        margin-bottom: 20px;
     }
     .sidebar h3 {
         color: #1f77b4;
-        font-size: 1.2em;
-        margin-bottom: 10px;
+        font-size: 1.3em;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+        margin-bottom: 15px;
     }
     .sidebar .stSelectbox div {
-        background-color: #ecf0f1;
-        padding: 5px 10px;
-        border-radius: 5px;
-    }
-    .sidebar .stSelectbox div:hover {
-        background-color: #d5dbdb;
-    }
-    .stButton>button {
-        background-color: #1f77b4;
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        border-radius: 5px;
+        background: linear-gradient(145deg, #ecf0f1, #ffffff);
+        padding: 8px 12px;
+        border-radius: 10px;
+        box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1), inset 0 0 5px rgba(255, 255, 255, 0.5);
         transition: all 0.3s ease;
     }
+    .sidebar .stSelectbox div:hover {
+        background: linear-gradient(145deg, #d5dbdb, #e8ecef);
+        transform: translateZ(5px);
+    }
+    .stButton>button {
+        background: linear-gradient(145deg, #1f77b4, #2980b9);
+        color: white;
+        border: none;
+        padding: 12px 25px;
+        border-radius: 10px;
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2), inset 0 0 5px rgba(255, 255, 255, 0.3);
+        transition: all 0.3s ease;
+        font-weight: bold;
+    }
     .stButton>button:hover {
-        background-color: #155a8a;
-        transform: translateY(-2px);
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        background: linear-gradient(145deg, #155a8a, #1f77b4);
+        transform: translateY(-5px) translateZ(10px);
+        box-shadow: 0 12px 20px rgba(0, 0, 0, 0.3), inset 0 0 5px rgba(255, 255, 255, 0.5);
     }
     .stButton>button:active {
-        transform: translateY(0);
+        transform: translateY(0) translateZ(0);
+        box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2), inset 0 0 5px rgba(0, 0, 0, 0.1);
     }
 
     /* Loading Spinner */
@@ -200,35 +216,47 @@ st.markdown(
         left: 50%;
         transform: translate(-50%, -50%);
         z-index: 1000;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
     }
 
-    /* Footer */
+    /* Footer with 3D Effect */
     .stMarkdown footer {
         text-align: center;
-        padding: 20px 0;
+        padding: 25px 0;
         color: #7f8c8d;
-        font-size: 0.9em;
+        font-size: 1em;
+        background: linear-gradient(145deg, #ffffff, #f0f3f5);
+        border-radius: 10px;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1), inset 0 0 10px rgba(255, 255, 255, 0.5);
+        transform: translateZ(5px);
     }
     .stMarkdown footer a {
         color: #1f77b4;
         text-decoration: none;
+        transition: all 0.3s ease;
     }
     .stMarkdown footer a:hover {
-        text-decoration: underline;
+        color: #155a8a;
+        text-shadow: 0 0 5px rgba(31, 119, 180, 0.5);
     }
 
-    /* Success and Warning Messages */
+    /* Success and Warning Messages with 3D Effect */
     .stSuccess {
-        background-color: #2ecc71;
+        background: linear-gradient(145deg, #2ecc71, #27ae60);
         color: white;
-        padding: 10px;
-        border-radius: 5px;
+        padding: 12px;
+        border-radius: 10px;
+        box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2), inset 0 0 5px rgba(255, 255, 255, 0.5);
     }
     .stWarning {
-        background-color: #e74c3c;
+        background: linear-gradient(145deg, #e74c3c, #c0392b);
         color: white;
-        padding: 10px;
-        border-radius: 5px;
+        padding: 12px;
+        border-radius: 10px;
+        box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2), inset 0 0 5px rgba(255, 255, 255, 0.5);
     }
     </style>
     """,
@@ -359,9 +387,9 @@ if time.time() - st.session_state.last_update >= interval:
 # Footer
 st.markdown(
     """
-    <div style="text-align: center; padding: 20px 0; color: #7f8c8d; font-size: 0.9em;">
+    <div style="text-align: center; padding: 25px 0; color: #7f8c8d; font-size: 1em; background: linear-gradient(145deg, #ffffff, #f0f3f5); border-radius: 10px; box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1), inset 0 0 10px rgba(255, 255, 255, 0.5); transform: translateZ(5px);">
         **ThreatLens** | © 2025 | 
-        <a href="mailto:your-email@example.com" style="color: #1f77b4; text-decoration: none;">Contact Us</a>  
+        <a href="mailto:your-email@example.com" style="color: #1f77b4; text-decoration: none; transition: all 0.3s ease;">Contact Us</a>  
         <br>This app processes your logs in real-time and does not store data unless explicitly saved.
     </div>
     """,
