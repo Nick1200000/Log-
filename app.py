@@ -7,6 +7,7 @@ import gzip
 import io
 import plotly.express as px
 import streamlit as st
+import time  # Add this import
 from datetime import datetime
 from typing import List, Dict, Optional
 from concurrent.futures import ThreadPoolExecutor
