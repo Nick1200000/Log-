@@ -1,0 +1,13 @@
+credentials:
+  usernames:
+    admin:
+      email: kumarn7570@gmail.com  # Replace with any email (e.g., your email)
+      name: Admin User
+      password: $2y$10$hyEem7C4S612POJowCgoau34Hewv1SycVemp4tyQ7ZNLbe4twi3jW  # Replace with a hashed password
+cookie:
+  name: streamlit_auth
+  key: rajeisbitch  # Replace with a random string (e.g., generated with `os.urandom(16).hex()`)
+  expiry_days: 30
+preauthorized:
+  emails:
+    - kumarn7570@gmail.com  # Match the email above
